@@ -190,6 +190,7 @@ class IVSSStringVectorUtil:
         ivss_vector_string = IVSSStringVectorUtil.convert_cvss_vector_to_ivss_vector(cvss_vector_string)
         ivss_categories = ivss_vector_string.split("/")
 
+        valid_input = False
         for v in ivss_categories:
             split_cat = v.split(":")
             full_category_name = [i for i,a in IVSSStringVectorUtil.abbreviations.items() if a == split_cat[0]]
@@ -197,11 +198,14 @@ class IVSSStringVectorUtil:
                 continue
 
             full_category_name = full_category_name[0]
+            valid_input = True
             if full_category_name and (split_cat[0] == "C" or split_cat[0] == "I" or split_cat[0] == "A"): # We use the abbreviations for faster string comparisons. It doesn't particularly matter, but it's a few less CPU clock cycles!
                 impact_group[full_category_name] = IVSSStringVectorUtil.from_string(split_cat[1])
             elif full_category_name:
                 exposure_group[full_category_name] = IVSSStringVectorUtil.from_string(split_cat[1])
 
+        if not valid_input: # If there are no valid groups...
+            return ({"":0},{"":0}) # ...send an empty input to trip error detection in other functions. This is not good code, but error detection was added in other places to safeguard against edge cases that are no longer possible, so this saves time.
         return (impact_group, exposure_group)
 
 class IVSSCalculator:

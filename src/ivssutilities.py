@@ -1,4 +1,4 @@
-class CVSSSampleGroups:
+class IVSSSampleGroups:
     impact_group = {
         "Confidentiality": 0.0,
         "Integrity": 0.0,
@@ -11,6 +11,17 @@ class CVSSSampleGroups:
         "Access": 0.0,
         "Complexity": 0.0,
         "Safety": 0.0,
+    }
+
+    weights = {
+        "Confidentiality": 1.0,
+        "Integrity": 1.0,
+        "Availability": 1.0,
+        "Authentication": 1.0,
+        "Non-Repudiation": 1.0,
+        "Access": 1.0,
+        "Complexity": 1.0,
+        "Safety": 1.0,
     }
 
 class IVSSStringVectorUtil:
@@ -185,8 +196,8 @@ class IVSSStringVectorUtil:
 
     @staticmethod
     def convert_cvss_to_ivss(cvss_vector_string:str) -> tuple[dict[str,float], dict[str, float]]:
-        impact_group = CVSSSampleGroups.impact_group.copy()
-        exposure_group = CVSSSampleGroups.exposure_group.copy()
+        impact_group = IVSSSampleGroups.impact_group.copy()
+        exposure_group = IVSSSampleGroups.exposure_group.copy()
         ivss_vector_string = IVSSStringVectorUtil.convert_cvss_vector_to_ivss_vector(cvss_vector_string)
         ivss_categories = ivss_vector_string.split("/")
 

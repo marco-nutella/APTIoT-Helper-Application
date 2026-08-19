@@ -1,7 +1,9 @@
 import flet as ft
 import math
+import base64
 from abc import abstractmethod
-from src.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, CVSSSampleGroups
+from src.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, IVSSSampleGroups
+from src.ivssvulnerability import IVSSVulnerability
 
 class IVSSCategory:
     category_name = ""
@@ -51,7 +53,7 @@ class IVSSCategory:
             ]
         )
 
-class IVSSWidget():
+class IVSSWidget(): # This is where the IVSSVulnerability "lives".
     colors = [
         "#b9e2ff",
         "#00eeae",
@@ -66,7 +68,7 @@ class IVSSWidget():
         "#5a0001"
     ]
 
-    def __init__(self, impact_group:dict[str, float], exposure_group:dict[str, float], weights:dict[str, float]):
+    def __init__(self, impact_group:dict[str, float]|None = None, exposure_group:dict[str, float]|None = None, weights:dict[str, float]|None = None, vulnerability:IVSSVulnerability|None = None):
         self.ivss_score = ft.Text(value="", size=56, weight=ft.FontWeight.W_700, text_align=ft.TextAlign.CENTER)
         self.ivss_text = ft.Text(value="", size=38, weight=ft.FontWeight.W_600, text_align=ft.TextAlign.CENTER)
         self.ivss_color = ft.Container(width=200, height=200, bgcolor=IVSSWidget.colors[0], border_radius=100)
@@ -75,9 +77,15 @@ class IVSSWidget():
 
         self.update_widget(impact_group, exposure_group, weights)
 
-    def update_widget(self, impact_group, exposure_group, weights, startup = True):
-        self.ivss = IVSSCalculator.get_ivss_score(impact_group, exposure_group)
-        self.weighted_ivss = IVSSCalculator.get_weighted_ivss_score(impact_group, exposure_group, weights)
+    def update_widget(self, impact_group:dict[str, float]|None = None, exposure_group:dict[str, float]|None = None, weights:dict[str, float]|None = None, vulnerability:IVSSVulnerability|None = None, startup = True):
+        if not vulnerability:
+            self.vulnerability = IVSSVulnerability() # This class' code needs to be cleaned up, but all changes to the IVSS vulnerability or score MUST go through the IVSS vulnerability object.
+            self.ivss = self.vulnerability.calculate_score(impact_group, exposure_group) # Saves constant function calls.
+            self.weighted_ivss = self.vulnerability.calculate_weighted_score(impact_group, exposure_group, weights) # Ditto.
+        else: # Allows for the widget to be created from an existing IVSS vulnerability instead.
+            self.vulnerability = vulnerability
+            self.ivss = self.vulnerability.get_score()
+            self.weighted_ivss = self.vulnerability.get_weighted_score()
         self.ivss_score.value = str(self.ivss[0])
         self.ivss_text.value = IVSSStringVectorUtil.string(self.ivss[0], False)
         self.ivss_color.bgcolor = IVSSWidget.get_color_from_score(self.ivss[0])
@@ -92,8 +100,9 @@ class IVSSWidget():
             self.ivss_str.update()
 
     def update_widget_from_score(self, given_score:tuple[float, str]):
-        self.ivss = given_score
-        self.weighted_ivss = given_score
+        self.vulnerability.force_set_score(given_score)
+        self.ivss = self.vulnerability.get_score()
+        self.weighted_ivss = self.vulnerability.get_weighted_score()
         self.ivss_score.value = str(self.ivss[0])
         self.ivss_text.value = IVSSStringVectorUtil.string(self.ivss[0], False)
         self.ivss_color.bgcolor = IVSSWidget.get_color_from_score(self.ivss[0])
@@ -105,6 +114,15 @@ class IVSSWidget():
         self.ivss_color.update()
         self.weighted_ivss_score.update()
         self.ivss_str.update()
+
+    def update_vulnerability_details(self, name:str = "Unnamed", description:str = "N/A", year:int = 1970, images:list[ft.FilePickerFile] = []):
+        self.vulnerability.update_info(name, description, year)
+        if images:
+            for i in images:
+                if not i.bytes: # We'll be reconstructing images from their source bytes, so if these aren't available, we cannot use them.
+                    continue
+                i.path = None # Shred the file paths before saving them into a vulnerability. If saving and loading is implemented, this information could be shared with other people and expose local file paths.
+            self.vulnerability.add_images(images) # This has input checking, so it could be outside of the if condition.
 
     @staticmethod
     def get_color_from_score(ivss_score:float) -> str:
@@ -151,26 +169,28 @@ class IVSSWidget():
         )
 
 class IVSSMainTab:
-    def __init__(self, page):
+    def __init__(self, page, complete_mode:bool = False, vulnerability:IVSSVulnerability|None = None): # Complete mode provides control over additional information for documentation purposes, as well as syncing both IVSS widgets together for multiple modes of use. Off by default.
         self.page = page
-        self.impact_group = CVSSSampleGroups.impact_group.copy()
-        self.exposure_group = CVSSSampleGroups.exposure_group.copy()
-        self.weights = {
-            "Confidentiality": 1.0,
-            "Integrity": 1.0,
-            "Availability": 1.0,
-            "Authentication": 1.0,
-            "Non-Repudiation": 1.0,
-            "Access": 1.0,
-            "Complexity": 1.0,
-            "Safety": 1.0,
-        }
+        self.impact_group = IVSSSampleGroups.impact_group.copy()
+        self.exposure_group = IVSSSampleGroups.exposure_group.copy()
+        self.weights = IVSSSampleGroups.weights.copy()
+        self.complete_mode = complete_mode
 
-        self.ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights)
-        self.cvss_ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights)
+        self.ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
+        self.cvss_ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
+        self.images_display = ft.Row(
+                        scroll=ft.ScrollMode.AUTO,
+                        width=800,
+                        expand=True,
+                        visible=complete_mode,
+                        controls=[]
+                    )
+        self.file_picker = ft.FilePicker()
 
     def update_widget(self):
-        self.ivss_widget.update_widget(self.impact_group, self.exposure_group, self.weights, False)
+        self.ivss_widget.update_widget(self.impact_group, self.exposure_group, self.weights, startup= False)
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_widget(self.impact_group, self.exposure_group, self.weights, startup= False)
 
     def on_weight_change(self, category:str, new_weight:float):
         self.weights[category] = new_weight
@@ -183,6 +203,49 @@ class IVSSMainTab:
 
     def on_enter_cvss_vector_string(self, event:ft.Event[ft.TextField]):
         self.cvss_ivss_widget.update_widget_from_score(IVSSCalculator.get_ivss_score_from_cvss_vector(event.control.value))
+        if self.complete_mode:
+            self.ivss_widget.update_widget_from_score(IVSSCalculator.get_ivss_score_from_cvss_vector(event.control.value))
+
+    def on_change_vulnerability_name(self, event:ft.Event[ft.TextField]):
+        self.ivss_widget.update_vulnerability_details(name=event.control.value)
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_details(name=event.control.value)
+
+    def on_change_vulnerability_description(self, event:ft.Event[ft.TextField]):
+        self.ivss_widget.update_vulnerability_details(description=event.control.value)
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_details(description=event.control.value)
+
+    def on_change_vulnerability_year(self, event:ft.Event[ft.TextField]):
+        self.ivss_widget.update_vulnerability_details(year=int(event.control.value))
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))
+
+    def on_add_vulnerability_images(self, event:ft.Event[ft.TextField]):
+        self.ivss_widget.update_vulnerability_details(year=int(event.control.value))
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))
+
+    async def upload_images(self):
+        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=True, with_data=True)
+        for i in images:
+            #reassembled_image = i.bytes.decode("utf-8", errors="replace") if i.bytes else "" # Nope.
+            if not i.bytes:
+                continue
+
+            self.images_display.controls.append(ft.Image(
+                src=base64.b64encode(i.bytes).decode("utf-8"), # It doesn't work without SPECIFICALLY encoding into base64 first. I mean... sure! We could also use the file path, but using the raw data allows for it to be saved locally.
+                expand=True,
+                width=200,
+                height=200,
+                border_radius=10,
+            ))
+        print(self.images_display.controls)
+        self.images_display.update()
+
+        self.ivss_widget.update_vulnerability_details(images=images)
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_details(images=images)
 
     def populate(self) -> ft.Container:
         return ft.Container(
@@ -210,6 +273,28 @@ class IVSSMainTab:
                                             spacing = 15,
                                             scroll = ft.ScrollMode.AUTO,
                                             controls = [
+                                                ft.Column(
+                                                    controls=[ # We use on_change instead of on_submit here. It's tremendously inefficient, but has no performance impact and prevents the user from losing their work by forgetting to press the Enter.
+                                                        ft.Text("Vulnerability Information", size=36, weight=ft.FontWeight.W_800),
+                                                        ft.Text(value="Name", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                        ft.TextField(label="Vulnerability Name", hint_text="Enter a vulnerability name here...", width = 400, on_change=self.on_change_vulnerability_name),
+                                                        ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                        ft.TextField(label="Vulnerability Description", hint_text="Enter vulnerability details here...", width = 800, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_vulnerability_description),
+                                                        ft.Text(value="Year", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                        ft.TextField(label="Enter Year", hint_text="...", width = 100, on_change=self.on_change_vulnerability_year,
+                                                                     input_filter=ft.InputFilter(
+                                                                        regex_string=r"^\d+$",
+                                                                        allow=True,
+                                                                        replacement_string=""
+                                                                    )
+                                                                ),
+                                                        ft.Text(value="Images", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                        self.images_display,
+                                                        ft.Button("Add Images", on_click=self.upload_images),
+                                                    ],
+                                                    alignment=ft.MainAxisAlignment.START,
+                                                    visible=self.complete_mode,
+                                                ),
                                                 ft.Row(
                                                     controls=[
                                                         ft.Text("Impact Group", size=36, weight=ft.FontWeight.W_800),

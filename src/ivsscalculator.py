@@ -2,6 +2,7 @@ import flet as ft
 import math
 import base64
 import copy
+from functools import partial
 from abc import abstractmethod
 from src.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, IVSSSampleGroups
 from src.ivssvulnerability import IVSSVulnerability
@@ -25,7 +26,7 @@ class IVSSCategory:
         self.slider = ft.Slider(min=0, max=200, divisions=20, value=self.weight_value, on_change=self.on_slider_change)
         self.slider_weight = ft.Text(value=f"Weight: {round(self.weight_value)}%", size=14, weight=ft.FontWeight.W_400)
 
-    def get_options(self) -> list[ft.DropdownOption]:
+    def get_options(self) -> list[ft.DropdownOption]: # Code snippet taken from: https://flet.dev/docs/controls/dropdown/
         return [
             ft.DropdownOption(
                 key = severity,
@@ -79,7 +80,7 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
     def __init__(self, impact_group:dict[str, float]|None = None, exposure_group:dict[str, float]|None = None, weights:dict[str, float]|None = None, vulnerability:IVSSVulnerability|None = None):
         self.ivss_score = ft.Text(value="", size=56, weight=ft.FontWeight.W_700, text_align=ft.TextAlign.CENTER)
         self.ivss_text = ft.Text(value="", size=38, weight=ft.FontWeight.W_600, text_align=ft.TextAlign.CENTER)
-        self.ivss_color = ft.Container(width=200, height=200, bgcolor=IVSSWidget.colors[0], border_radius=100)
+        self.ivss_color = ft.Container(width=200, height=200, bgcolor=IVSSWidget.colors[0], border_radius=25)
         self.weighted_ivss_score = ft.Text(value="", size=14, weight=ft.FontWeight.W_400)
         self.ivss_str = ft.Text(value="", size=14, weight=ft.FontWeight.W_600)
         self.vulnerability = vulnerability if vulnerability else IVSSVulnerability()
@@ -132,9 +133,14 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
                 i.path = None # Shred the file paths before saving them into a vulnerability. If saving and loading is implemented, this information could be shared with other people and expose local file paths.
             self.vulnerability.add_images(images) # This has input checking, so it could be outside of the if condition.
 
+    def update_vulnerability_protocol(self, protocol:str = ""):
+        self.vulnerability.set_protocol(protocol)
+
     @staticmethod
     def get_color_from_score(ivss_score:float) -> str:
         rounded_score = math.floor(ivss_score)
+        if rounded_score > 10:
+            rounded_score = 10
         return IVSSWidget.colors[rounded_score]
 
     def get_vulnerability(self) -> IVSSVulnerability:
@@ -179,7 +185,51 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
             ]
         )
 
-    def create_widget(self): # For use in lists of vulnerabilities.
+    def fullscreen_image(self, image, page):
+        img_container = ft.Container(
+            content=ft.Image(
+                src=image,
+            ),
+            expand=True,
+        )
+        
+        # Create the dialog
+        dialog = ft.AlertDialog(
+            content=img_container,
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: page.pop_dialog()),
+            ],
+            modal=True,
+        )
+        
+        page.show_dialog(dialog)
+
+    def create_widget(self, page): # For use in lists of vulnerabilities.
+        self.ivss_str.width = 200
+        self.ivss_str.max_lines = 4
+        self.weighted_ivss_score.width = 200
+        self.weighted_ivss_score.max_lines = 2
+        images = self.vulnerability.get_images()
+        images_controls = []
+        for i in images:
+            if not i.bytes:
+                continue
+
+            images_controls.append(
+                ft.IconButton(
+                    icon=(
+                        ft.Image(
+                            src=base64.b64encode(i.bytes).decode("utf-8"), # It doesn't work without SPECIFICALLY encoding into base64 first. I mean... sure! We could also use the file path, but using the raw data allows for it to be saved locally.
+                            expand=True,
+                            width=200,
+                            height=200,
+                            border_radius=5,
+                        )
+                    ),
+                    on_click=partial(self.fullscreen_image, base64.b64encode(i.bytes).decode("utf-8"), page),
+                )
+            )
+
         return ft.Container(
             expand=True,
             width=550,
@@ -221,31 +271,49 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
                             ),
                             ft.Row(
                                 margin=10,
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[
+                                    self.weighted_ivss_score
+                                ]
+                            ),
+                            ft.Row(
+                                margin=10,
                                 alignment=ft.MainAxisAlignment.START,
                                 controls=[
                                     self.ivss_str
                                 ]
+                            ),
+                            ft.Column(
+                                scroll=ft.ScrollMode.AUTO,
+                                margin=25,
+                                expand=True,
+                                controls=images_controls
                             )
                         ]
                     ),
                     ft.Column(
                         alignment=ft.MainAxisAlignment.START,
-                        margin=50,
+                        spacing=-3,
+                        margin=10,
                         controls=[
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.START,
-                                controls=[ft.Text(value=f"{self.vulnerability.get_name()}", size=28, weight=ft.FontWeight.W_800)]
+                                controls=[ft.Text(value=f"{str(self.vulnerability.get_id())}", size=28, weight=ft.FontWeight.W_900, width=250)]
                             ),
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.START,
-                                controls=[ft.Text(value=f"{str(self.vulnerability.get_year())}", size=24, weight=ft.FontWeight.W_800)]
+                                controls=[ft.Text(value=f"{self.vulnerability.get_name()}", size=20, weight=ft.FontWeight.W_800, width=250, max_lines=2)]
                             ),
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.START,
-                                controls=[ft.Text(value=f"{self.vulnerability.get_description()}", size=16, weight=ft.FontWeight.W_600)]
+                                controls=[ft.Text(value=f"{str(self.vulnerability.get_year())}", size=20, weight=ft.FontWeight.W_800, width=250, max_lines=2)]
+                            ),
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.START,
+                                controls=[ft.Text(value=f"{self.vulnerability.get_description()}", size=12, weight=ft.FontWeight.W_600, width=250, max_lines=15)]
                             ),
                         ]
-                    )
+                    ),
                 ]
             )
         )
@@ -272,9 +340,10 @@ class IVSSMainTab:
         self.ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
         self.cvss_ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
 
-        self.name_input = ft.TextField(label="Vulnerability Name", hint_text="Enter a vulnerability name here...", width = 400, on_change=self.on_change_vulnerability_name)
-        self.description_input = ft.TextField(label="Vulnerability Description", hint_text="Enter vulnerability details here...", width = 800, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_vulnerability_description)
-        self.year_input = ft.TextField(label="Enter Year", hint_text="...", width = 100, on_change=self.on_change_vulnerability_year,
+        self.name_input = ft.TextField(label="Vulnerability Name", hint_text="Enter a vulnerability name here...", width=400, on_change=self.on_change_vulnerability_name)
+        self.description_input = ft.TextField(label="Vulnerability Description", hint_text="Enter vulnerability details here...", width=800, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_vulnerability_description)
+        self.protocol_input = ft.TextField(label="Vulnerability Protocol", hint_text="Enter the vulnerable protocol here...", width=200, on_change=self.on_change_vulnerability_protocol)
+        self.year_input = ft.TextField(label="Enter Year", hint_text="...", width=100, on_change=self.on_change_vulnerability_year,
                         input_filter=ft.InputFilter(
                             regex_string=r"^\d+$",
                             allow=True,
@@ -319,6 +388,11 @@ class IVSSMainTab:
         if self.complete_mode:
             self.cvss_ivss_widget.update_vulnerability_details(description=event.control.value)
 
+    def on_change_vulnerability_protocol(self, event:ft.Event[ft.TextField]):
+        self.ivss_widget.update_vulnerability_protocol(event.control.value)
+        if self.complete_mode:
+            self.cvss_ivss_widget.update_vulnerability_protocol(event.control.value)
+
     def on_change_vulnerability_year(self, event:ft.Event[ft.TextField]):
         self.ivss_widget.update_vulnerability_details(year=int(event.control.value))
         if self.complete_mode:
@@ -335,9 +409,11 @@ class IVSSMainTab:
         vulnerability = copy.deepcopy(self.ivss_widget.get_vulnerability()) # Creates independence from the vulnerability we're about to reset.
 
         self.ivss_widget.update_widget(vulnerability=IVSSVulnerability())
+        self.cvss_ivss_widget.update_widget(vulnerability=IVSSVulnerability())
         self.images_display.controls = [] # Reset the vulnerability
         self.name_input.value = ""
         self.description_input.value = ""
+        self.protocol_input.value = ""
         self.year_input.value = ""
         for c in self.categories.values():
             c.reset_category()
@@ -360,7 +436,7 @@ class IVSSMainTab:
                 expand=True,
                 width=200,
                 height=200,
-                border_radius=10,
+                border_radius=5,
             ))
         self.images_display.update()
 
@@ -399,6 +475,8 @@ class IVSSMainTab:
                                                         self.name_input,
                                                         ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
                                                         self.description_input,
+                                                        ft.Text(value="Protocol", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                        self.protocol_input,
                                                         ft.Text(value="Year", expand=True, size=24, weight=ft.FontWeight.W_600),
                                                         self.year_input,
                                                         ft.Text(value="Images", expand=True, size=24, weight=ft.FontWeight.W_600),

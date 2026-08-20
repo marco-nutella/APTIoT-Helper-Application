@@ -222,6 +222,12 @@ class IVSSStringVectorUtil:
 class IVSSCalculator:
     @staticmethod
     def get_group_score(categories:dict[str, float]) -> float:
+        if not len(categories):
+            return 0.0
+
+        if len(categories) == 1:
+            return next(iter(categories.values()))
+        
         categories_values = categories.values()
         maxCat = max(categories_values)
 

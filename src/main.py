@@ -1,11 +1,13 @@
 import flet as ft
 from src.ivsscalculator import IVSSMainTab
+from src.idsescalculator import IDSESMainTab
 
 
 def main(page: ft.Page):
     counter = ft.Text("0", size=50, data=0)
 
     ivss_tab = IVSSMainTab(page)
+    idses_tab = IDSESMainTab(page)
 
     selection_tabs = ft.Tabs(
         length=4,
@@ -29,7 +31,7 @@ def main(page: ft.Page):
                         ),
                         ft.Container(
                             alignment=ft.Alignment.CENTER,
-                            content=ft.Text("Settings content"),
+                            content=idses_tab.populate(),
                         ),
                         ft.Container(
                             alignment=ft.Alignment.CENTER,

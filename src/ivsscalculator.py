@@ -1,6 +1,7 @@
 import flet as ft
 import math
 import base64
+import copy
 from abc import abstractmethod
 from src.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, IVSSSampleGroups
 from src.ivssvulnerability import IVSSVulnerability
@@ -13,7 +14,15 @@ class IVSSCategory:
         self.category_name = name
         self.source_group = source_group
         self.parent = parent
+        self.dropdown = ft.Dropdown(
+                            width = 400,
+                            key = str.lower(self.category_name) + "_dropdown",
+                            label = "Select...",
+                            options = self.get_options(),
+                            on_select = self.on_select_severity
+                        )
         self.weight_value = 100
+        self.slider = ft.Slider(min=0, max=200, divisions=20, value=self.weight_value, on_change=self.on_slider_change)
         self.slider_weight = ft.Text(value=f"Weight: {round(self.weight_value)}%", size=14, weight=ft.FontWeight.W_400)
 
     def get_options(self) -> list[ft.DropdownOption]:
@@ -37,19 +46,18 @@ class IVSSCategory:
         self.slider_weight.update()
         self.parent.on_weight_change(self.category_name, self.weight_value/100)
 
+    def reset_category(self):
+        self.dropdown.value = None
+        self.slider.value = self.weight_value
+        self.slider_weight.value = f"Weight: {round(self.weight_value)}%"
+
     def populate(self):
         return ft.Column(
             controls= [
                 ft.Text(self.category_name, expand=True, size=24, weight=ft.FontWeight.W_600),
-                ft.Dropdown(
-                    width = 400,
-                    key = str.lower(self.category_name) + "_dropdown",
-                    label = "Select...",
-                    options = self.get_options(),
-                    on_select = self.on_select_severity
-                ),
+                self.dropdown,
                 self.slider_weight,
-                ft.Slider(min=0, max=200, divisions=20, value=self.weight_value, on_change=self.on_slider_change)
+                self.slider
             ]
         )
 
@@ -74,16 +82,16 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
         self.ivss_color = ft.Container(width=200, height=200, bgcolor=IVSSWidget.colors[0], border_radius=100)
         self.weighted_ivss_score = ft.Text(value="", size=14, weight=ft.FontWeight.W_400)
         self.ivss_str = ft.Text(value="", size=14, weight=ft.FontWeight.W_600)
+        self.vulnerability = vulnerability if vulnerability else IVSSVulnerability()
 
-        self.update_widget(impact_group, exposure_group, weights)
+        self.update_widget(impact_group, exposure_group, weights, vulnerability)
 
     def update_widget(self, impact_group:dict[str, float]|None = None, exposure_group:dict[str, float]|None = None, weights:dict[str, float]|None = None, vulnerability:IVSSVulnerability|None = None, startup = True):
-        if not vulnerability:
-            self.vulnerability = IVSSVulnerability() # This class' code needs to be cleaned up, but all changes to the IVSS vulnerability or score MUST go through the IVSS vulnerability object.
+        if not vulnerability: # This class' code needs to be cleaned up, but all changes to the IVSS vulnerability or score MUST go through the IVSS vulnerability object.
             self.ivss = self.vulnerability.calculate_score(impact_group, exposure_group) # Saves constant function calls.
             self.weighted_ivss = self.vulnerability.calculate_weighted_score(impact_group, exposure_group, weights) # Ditto.
         else: # Allows for the widget to be created from an existing IVSS vulnerability instead.
-            self.vulnerability = vulnerability
+            self.vulnerability = vulnerability # Replace our current vulnerability with the new one we just got.
             self.ivss = self.vulnerability.get_score()
             self.weighted_ivss = self.vulnerability.get_weighted_score()
         self.ivss_score.value = str(self.ivss[0])
@@ -115,7 +123,7 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
         self.weighted_ivss_score.update()
         self.ivss_str.update()
 
-    def update_vulnerability_details(self, name:str = "Unnamed", description:str = "N/A", year:int = 1970, images:list[ft.FilePickerFile] = []):
+    def update_vulnerability_details(self, name:str = "", description:str = "", year:int = 0, images:list[ft.FilePickerFile] = []):
         self.vulnerability.update_info(name, description, year)
         if images:
             for i in images:
@@ -128,6 +136,9 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
     def get_color_from_score(ivss_score:float) -> str:
         rounded_score = math.floor(ivss_score)
         return IVSSWidget.colors[rounded_score]
+
+    def get_vulnerability(self) -> IVSSVulnerability:
+        return self.vulnerability
 
     def populate(self, show_weight:bool = True):
         self.weighted_ivss_score.visible = show_weight
@@ -168,6 +179,77 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
             ]
         )
 
+    def create_widget(self): # For use in lists of vulnerabilities.
+        return ft.Container(
+            expand=True,
+            width=550,
+            height=600,
+            border_radius=50,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=3,
+                color=ft.Colors.BLUE_GREY_300,
+                offset=ft.Offset(0, 0),
+                blur_style=ft.BlurStyle.OUTER,
+            ),
+            content=ft.Row(
+                controls=[
+                    ft.Column(
+                        spacing=-15,
+                        alignment=ft.MainAxisAlignment.START,
+                        controls=[
+                            ft.Row(
+                                margin=10,
+                                spacing=25,
+                                controls=[
+                                    ft.Stack(
+                                        alignment=ft.Alignment.CENTER,
+                                        controls=[
+                                            self.ivss_color,
+                                            ft.Column(
+                                                alignment=ft.MainAxisAlignment.CENTER,
+                                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                                spacing=-17,
+                                                controls=[
+                                                    self.ivss_score,
+                                                    self.ivss_text
+                                                ]
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            ft.Row(
+                                margin=10,
+                                alignment=ft.MainAxisAlignment.START,
+                                controls=[
+                                    self.ivss_str
+                                ]
+                            )
+                        ]
+                    ),
+                    ft.Column(
+                        alignment=ft.MainAxisAlignment.START,
+                        margin=50,
+                        controls=[
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.START,
+                                controls=[ft.Text(value=f"{self.vulnerability.get_name()}", size=28, weight=ft.FontWeight.W_800)]
+                            ),
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.START,
+                                controls=[ft.Text(value=f"{str(self.vulnerability.get_year())}", size=24, weight=ft.FontWeight.W_800)]
+                            ),
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.START,
+                                controls=[ft.Text(value=f"{self.vulnerability.get_description()}", size=16, weight=ft.FontWeight.W_600)]
+                            ),
+                        ]
+                    )
+                ]
+            )
+        )
+
 class IVSSMainTab:
     def __init__(self, page, complete_mode:bool = False, vulnerability:IVSSVulnerability|None = None): # Complete mode provides control over additional information for documentation purposes, as well as syncing both IVSS widgets together for multiple modes of use. Off by default.
         self.page = page
@@ -176,8 +258,29 @@ class IVSSMainTab:
         self.weights = IVSSSampleGroups.weights.copy()
         self.complete_mode = complete_mode
 
+        self.categories = {
+            "Confidentiality":IVSSCategory("Confidentiality", self.impact_group, self),
+            "Integrity":IVSSCategory("Integrity", self.impact_group, self),
+            "Availability":IVSSCategory("Availability", self.impact_group, self),
+            "Authentication":IVSSCategory("Authentication", self.exposure_group, self),
+            "Non-Repudiation":IVSSCategory("Non-Repudiation", self.exposure_group, self),
+            "Access":IVSSCategory("Access", self.exposure_group, self),
+            "Complexity":IVSSCategory("Complexity", self.exposure_group, self),
+            "Safety":IVSSCategory("Safety", self.exposure_group, self),
+        }
+
         self.ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
         self.cvss_ivss_widget = IVSSWidget(self.impact_group, self.exposure_group, self.weights, vulnerability)
+
+        self.name_input = ft.TextField(label="Vulnerability Name", hint_text="Enter a vulnerability name here...", width = 400, on_change=self.on_change_vulnerability_name)
+        self.description_input = ft.TextField(label="Vulnerability Description", hint_text="Enter vulnerability details here...", width = 800, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_vulnerability_description)
+        self.year_input = ft.TextField(label="Enter Year", hint_text="...", width = 100, on_change=self.on_change_vulnerability_year,
+                        input_filter=ft.InputFilter(
+                            regex_string=r"^\d+$",
+                            allow=True,
+                            replacement_string=""
+                        )
+                    )
         self.images_display = ft.Row(
                         scroll=ft.ScrollMode.AUTO,
                         width=800,
@@ -226,6 +329,25 @@ class IVSSMainTab:
         if self.complete_mode:
             self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))
 
+    def export_vulnerability_and_reset_calculator(self) -> IVSSVulnerability:
+        if not self.complete_mode:
+            raise Exception("Exporting vulnerabilities only available in complete mode.")
+        vulnerability = copy.deepcopy(self.ivss_widget.get_vulnerability()) # Creates independence from the vulnerability we're about to reset.
+
+        self.ivss_widget.update_widget(vulnerability=IVSSVulnerability())
+        self.images_display.controls = [] # Reset the vulnerability
+        self.name_input.value = ""
+        self.description_input.value = ""
+        self.year_input.value = ""
+        for c in self.categories.values():
+            c.reset_category()
+
+        for i in (self.impact_group, self.exposure_group): # There's a bug I've been facing (which I believe is related to Python's referencing system) which causes re-copying the default tables to break pointers and prevent the calculator from working, so I have to reset it manually.
+            for k,_ in i.items():
+                i[k] = 0.0
+
+        return vulnerability
+
     async def upload_images(self):
         images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=True, with_data=True)
         for i in images:
@@ -240,17 +362,14 @@ class IVSSMainTab:
                 height=200,
                 border_radius=10,
             ))
-        print(self.images_display.controls)
         self.images_display.update()
 
         self.ivss_widget.update_vulnerability_details(images=images)
         if self.complete_mode:
             self.cvss_ivss_widget.update_vulnerability_details(images=images)
 
-    def populate(self) -> ft.Container:
-        return ft.Container(
-            alignment = ft.Alignment.CENTER,
-            content= ft.Tabs(
+    def populate(self) -> ft.Tabs:
+            return ft.Tabs(
                 length=2,
                 expand=True,
                 content=ft.Column(
@@ -277,17 +396,11 @@ class IVSSMainTab:
                                                     controls=[ # We use on_change instead of on_submit here. It's tremendously inefficient, but has no performance impact and prevents the user from losing their work by forgetting to press the Enter.
                                                         ft.Text("Vulnerability Information", size=36, weight=ft.FontWeight.W_800),
                                                         ft.Text(value="Name", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        ft.TextField(label="Vulnerability Name", hint_text="Enter a vulnerability name here...", width = 400, on_change=self.on_change_vulnerability_name),
+                                                        self.name_input,
                                                         ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        ft.TextField(label="Vulnerability Description", hint_text="Enter vulnerability details here...", width = 800, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_vulnerability_description),
+                                                        self.description_input,
                                                         ft.Text(value="Year", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        ft.TextField(label="Enter Year", hint_text="...", width = 100, on_change=self.on_change_vulnerability_year,
-                                                                     input_filter=ft.InputFilter(
-                                                                        regex_string=r"^\d+$",
-                                                                        allow=True,
-                                                                        replacement_string=""
-                                                                    )
-                                                                ),
+                                                        self.year_input,
                                                         ft.Text(value="Images", expand=True, size=24, weight=ft.FontWeight.W_600),
                                                         self.images_display,
                                                         ft.Button("Add Images", on_click=self.upload_images),
@@ -303,15 +416,15 @@ class IVSSMainTab:
                                                 ),
                                                 ft.Row(
                                                     controls=[
-                                                        IVSSCategory("Confidentiality", self.impact_group, self).populate(),
-                                                        IVSSCategory("Integrity", self.impact_group, self).populate(),
+                                                        self.categories["Confidentiality"].populate(),
+                                                        self.categories["Integrity"].populate(),
                                                     ],
                                                     alignment=ft.MainAxisAlignment.START,
                                                     spacing = 50,
                                                 ),
                                                 ft.Row(
                                                     controls=[
-                                                        IVSSCategory("Availability", self.impact_group, self).populate(),
+                                                        self.categories["Availability"].populate(),
                                                     ],
                                                     alignment=ft.MainAxisAlignment.START
                                                 ),
@@ -323,23 +436,23 @@ class IVSSMainTab:
                                                 ),
                                                 ft.Row(
                                                     controls=[
-                                                        IVSSCategory("Authentication", self.exposure_group, self).populate(),
-                                                        IVSSCategory("Non-Repudiation", self.exposure_group, self).populate(),
+                                                        self.categories["Authentication"].populate(),
+                                                        self.categories["Non-Repudiation"].populate(),
                                                     ],
                                                     alignment=ft.MainAxisAlignment.START,
                                                     spacing = 50,
                                                 ),
                                                 ft.Row(
                                                     controls=[
-                                                        IVSSCategory("Access", self.exposure_group, self).populate(),
-                                                        IVSSCategory("Complexity", self.exposure_group, self).populate(),
+                                                        self.categories["Access"].populate(),
+                                                        self.categories["Complexity"].populate(),
                                                     ],
                                                     alignment=ft.MainAxisAlignment.START,
                                                     spacing = 50,
                                                 ),
                                                 ft.Row(
                                                     controls=[
-                                                        IVSSCategory("Safety", self.exposure_group, self).populate(),
+                                                        self.categories["Safety"].populate(),
                                                     ],
                                                     alignment=ft.MainAxisAlignment.START
                                                 ),
@@ -374,5 +487,3 @@ class IVSSMainTab:
                     ]
                 )
             )
-        )
-    

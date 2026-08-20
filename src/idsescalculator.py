@@ -1,5 +1,6 @@
 import flet as ft
 from src.idsesutilities import Protocols, RiskEnvironment, RiskCriticality
+from src.ivsscalculator import IVSSMainTab, IVSSWidget
 from src.ivssvulnerability import IVSSVulnerability
 
 class IDSESDevice:
@@ -36,126 +37,74 @@ class IDSESMainTab:
     def __init__(self, page):
         self.page = page
         self.device = IDSESDevice()
+        self.checkboxes = []
+        self.vulnerability_widgets = []
+        self.ivss_main_tab = IVSSMainTab(page, True)
+        self.ivss_editor = self.ivss_main_tab.populate()
 
-    def update_widget(self):
-        self.ivss_widget.update_widget(self.impact_group, self.exposure_group, self.weights, False)
+        for p in Protocols: 
+            self.checkboxes.append(ft.Checkbox(label=p.value[0], value=False, data=p.value[1]))
 
-    def on_weight_change(self, category:str, new_weight:float):
-        self.weights[category] = new_weight
-        self.update_widget()
-
-    async def ivss_str_to_clipboard(self):
-        ivss_vector_string = IVSSStringVectorUtil.get_ivss_str(self.impact_group, self.exposure_group)
-        await ft.Clipboard().set(ivss_vector_string)
-        self.page.show_dialog(ft.SnackBar("Text copied to clipboard"))
-
-    def on_enter_cvss_vector_string(self, event:ft.Event[ft.TextField]):
-        self.cvss_ivss_widget.update_widget_from_score(IVSSCalculator.get_ivss_score_from_cvss_vector(event.control.value))
+    def add_vulnerability_prompt(self):
+        self.vulnerability_widgets.append(IVSSWidget(vulnerability=self.ivss_main_tab.export_vulnerability_and_reset_calculator()).create_widget())
+        self.page.update()
 
     def populate(self) -> ft.Container:
+        checkboxes_split_point = round(len(self.checkboxes)/2)
         return ft.Container(
             alignment = ft.Alignment.CENTER,
-            content= ft.Tabs(
-                length=2,
-                expand=True,
-                content=ft.Column(
-                    controls = [
-                        ft.TabBar(
-                            secondary=True,
-                            tabs=[
-                                ft.Tab(label=ft.Text("Vulnerability Score Calculator")),
-                                ft.Tab(label=ft.Text("CVSS to IVSS Converter"))
-                            ]
-                        ),
-                        ft.TabBarView(
-                            expand=True,
-                            controls=[
-                                ft.Row(
-                                    spacing = 10,
-                                    controls=[
-                                        ft.Column(
-                                            margin = 15,
-                                            spacing = 15,
-                                            scroll = ft.ScrollMode.AUTO,
-                                            controls = [
-                                                ft.Row(
-                                                    controls=[
-                                                        ft.Text("Impact Group", size=36, weight=ft.FontWeight.W_800),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        IVSSCategory("Confidentiality", self.impact_group, self).populate(),
-                                                        IVSSCategory("Integrity", self.impact_group, self).populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        IVSSCategory("Availability", self.impact_group, self).populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        ft.Text("Exposure Group", size=36, weight=ft.FontWeight.W_800),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        IVSSCategory("Authentication", self.exposure_group, self).populate(),
-                                                        IVSSCategory("Non-Repudiation", self.exposure_group, self).populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        IVSSCategory("Access", self.exposure_group, self).populate(),
-                                                        IVSSCategory("Complexity", self.exposure_group, self).populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        IVSSCategory("Safety", self.exposure_group, self).populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                            ]
-                                        ),
-                                        ft.Column(
-                                            margin = 15,
-                                            spacing = 15,
-                                            controls = [
-                                                self.ivss_widget.populate(),
-                                                ft.Button("Copy to clipboard", on_click=self.ivss_str_to_clipboard),
-                                            ]
-                                        )
-                                    ],
-                                ),
-                                ft.Row(
-                                    controls=[
-                                        ft.Column(
-                                            alignment=ft.MainAxisAlignment.CENTER,
-                                            margin=15,
-                                            controls=[
-                                                self.cvss_ivss_widget.populate(False),
-                                                ft.Button("Copy to clipboard", on_click=self.ivss_str_to_clipboard)
-                                            ]
-                                        ),
-                                        ft.TextField(label="CVSS Vector String", hint_text="Enter a CVSS Vector String here...", on_submit=self.on_enter_cvss_vector_string)
-                                    ],
-                                    alignment=ft.MainAxisAlignment.CENTER
-                                ),
-                            ]
-                        )
-                    ]
-                )
+            content= ft.Row(
+                spacing = 5,
+                controls=[
+                    ft.Column(
+                        margin = 15,
+                        spacing = 15,
+                        scroll = ft.ScrollMode.AUTO,
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text("Communications Protocols", size=36, weight=ft.FontWeight.W_800),
+                                ],
+                                alignment=ft.MainAxisAlignment.START,
+                            ),
+                            ft.Row(
+                                controls=self.checkboxes[:checkboxes_split_point],
+                                alignment=ft.MainAxisAlignment.START,
+                            ),
+                            ft.Row(
+                                controls=self.checkboxes[checkboxes_split_point:],
+                                alignment=ft.MainAxisAlignment.START,
+                            ),
+                            ft.Row(
+                                controls=[
+                                    ft.Text("Vulnerabilities", size=36, weight=ft.FontWeight.W_800),
+                                    ft.Button("Add Vulnerability", on_click=self.add_vulnerability_prompt)
+                                ],
+                                alignment=ft.MainAxisAlignment.START,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER
+                            ),
+                            ft.Row(
+                                controls=[
+                                    ft.Text("Insert vulnerability on the right, then press the button above.", size=16, weight=ft.FontWeight.W_600),
+                                ],
+                                alignment=ft.MainAxisAlignment.START,
+                            ),
+                            ft.Column(
+                                spacing=10,
+                                margin=10,
+                                controls=self.vulnerability_widgets,
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                            )
+                        ],
+                    ),
+                    ft.Row(
+                        controls=[
+                            ft.Text("Hi!")
+                        ]
+                    ),
+                    self.ivss_editor,
+                ]
             )
         )
     

@@ -4,8 +4,8 @@ import base64
 import copy
 from functools import partial
 from abc import abstractmethod
-from src.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, IVSSSampleGroups
-from src.ivssvulnerability import IVSSVulnerability
+from ivss.ivssutilities import IVSSSeveritiesMap, IVSSCalculator, IVSSStringVectorUtil, IVSSSampleGroups
+from ivss.ivssvulnerability import IVSSVulnerability
 
 class IVSSCategory:
     category_name = ""
@@ -26,7 +26,7 @@ class IVSSCategory:
         self.slider = ft.Slider(min=0, max=200, divisions=20, value=self.weight_value, on_change=self.on_slider_change)
         self.slider_weight = ft.Text(value=f"Weight: {round(self.weight_value)}%", size=14, weight=ft.FontWeight.W_400)
 
-    def get_options(self) -> list[ft.DropdownOption]: # Code snippet taken from: https://flet.dev/docs/controls/dropdown/
+    def get_options(self) -> list[ft.DropdownOption]: # Code snippet taken from the official Flet documentation at: https://flet.dev/docs/controls/dropdown/
         return [
             ft.DropdownOption(
                 key = severity,
@@ -458,93 +458,97 @@ class IVSSMainTab:
                             ]
                         ),
                         ft.TabBarView(
+                            width=1250, # Unbound width constraints in this section lead to this UI element completely breaking inside scroll controls (such as those in the IDSES tab), even with expand enabled. This is most likely the result of unsafe or unintended layout usage and this is only a band-aid fix.
                             expand=True,
                             controls=[
-                                ft.Row(
-                                    spacing = 10,
-                                    controls=[
-                                        ft.Column(
-                                            margin = 15,
-                                            spacing = 15,
-                                            scroll = ft.ScrollMode.AUTO,
-                                            controls = [
-                                                ft.Column(
-                                                    controls=[ # We use on_change instead of on_submit here. It's tremendously inefficient, but has no performance impact and prevents the user from losing their work by forgetting to press the Enter.
-                                                        ft.Text("Vulnerability Information", size=36, weight=ft.FontWeight.W_800),
-                                                        ft.Text(value="Name", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        self.name_input,
-                                                        ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        self.description_input,
-                                                        ft.Text(value="Protocol", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        self.protocol_input,
-                                                        ft.Text(value="Year", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        self.year_input,
-                                                        ft.Text(value="Images", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                                        self.images_display,
-                                                        ft.Button("Add Images", on_click=self.upload_images),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    visible=self.complete_mode,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        ft.Text("Impact Group", size=36, weight=ft.FontWeight.W_800),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        self.categories["Confidentiality"].populate(),
-                                                        self.categories["Integrity"].populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        self.categories["Availability"].populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        ft.Text("Exposure Group", size=36, weight=ft.FontWeight.W_800),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        self.categories["Authentication"].populate(),
-                                                        self.categories["Non-Repudiation"].populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        self.categories["Access"].populate(),
-                                                        self.categories["Complexity"].populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START,
-                                                    spacing = 50,
-                                                ),
-                                                ft.Row(
-                                                    controls=[
-                                                        self.categories["Safety"].populate(),
-                                                    ],
-                                                    alignment=ft.MainAxisAlignment.START
-                                                ),
-                                            ]
-                                        ),
-                                        ft.Column(
-                                            margin = 15,
-                                            spacing = 15,
-                                            controls = [
-                                                self.ivss_widget.populate(),
-                                                ft.Button("Copy to clipboard", on_click=self.ivss_str_to_clipboard),
-                                            ]
-                                        )
-                                    ],
+                                ft.Container(
+                                    #expand=True,
+                                    content= ft.Row(
+                                        spacing = 10,
+                                        controls=[
+                                            ft.Column(
+                                                margin = 15,
+                                                spacing = 15,
+                                                scroll = ft.ScrollMode.AUTO,
+                                                controls = [
+                                                    ft.Column(
+                                                        controls=[ # We use on_change instead of on_submit here. It's tremendously inefficient, but has no performance impact and prevents the user from losing their work by forgetting to press the Enter.
+                                                            ft.Text("Vulnerability Information", size=36, weight=ft.FontWeight.W_800),
+                                                            ft.Text(value="Name", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                            self.name_input,
+                                                            ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                            self.description_input,
+                                                            ft.Text(value="Protocol", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                            self.protocol_input,
+                                                            ft.Text(value="Year", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                            self.year_input,
+                                                            ft.Text(value="Images", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                                            self.images_display,
+                                                            ft.Button("Add Images", on_click=self.upload_images),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START,
+                                                        visible=self.complete_mode,
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            ft.Text("Impact Group", size=36, weight=ft.FontWeight.W_800),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START,
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            self.categories["Confidentiality"].populate(),
+                                                            self.categories["Integrity"].populate(),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START,
+                                                        spacing = 50,
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            self.categories["Availability"].populate(),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            ft.Text("Exposure Group", size=36, weight=ft.FontWeight.W_800),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            self.categories["Authentication"].populate(),
+                                                            self.categories["Non-Repudiation"].populate(),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START,
+                                                        spacing = 50,
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            self.categories["Access"].populate(),
+                                                            self.categories["Complexity"].populate(),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START,
+                                                        spacing = 50,
+                                                    ),
+                                                    ft.Row(
+                                                        controls=[
+                                                            self.categories["Safety"].populate(),
+                                                        ],
+                                                        alignment=ft.MainAxisAlignment.START
+                                                    ),
+                                                ]
+                                            ),
+                                            ft.Column(
+                                                margin = 15,
+                                                spacing = 15,
+                                                controls = [
+                                                    self.ivss_widget.populate(),
+                                                    ft.Button("Copy to clipboard", on_click=self.ivss_str_to_clipboard),
+                                                ]
+                                            )
+                                        ],
+                                    ),
                                 ),
                                 ft.Row(
                                     controls=[

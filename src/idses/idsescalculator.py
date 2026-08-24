@@ -1,9 +1,9 @@
 import flet as ft
 #from functools import partial
-from src.idsesutilities import Protocols, RiskEnvironment, RiskCriticality, RiskAcceptance
-from src.ivsscalculator import IVSSMainTab, IVSSWidget
-from src.ivssutilities import IVSSStringVectorUtil
-from src.ivssvulnerability import IVSSVulnerability
+from idses.idsesutilities import Protocols, RiskEnvironment, RiskCriticality, RiskAcceptance
+from ivss.ivsscalculator import IVSSMainTab, IVSSWidget
+from ivss.ivssutilities import IVSSStringVectorUtil
+from ivss.ivssvulnerability import IVSSVulnerability
 
 class IDSESDevice:
     def __init__(self, name:str = "Unnamed", manufacturer:str = "N/A", year:int = 1970):
@@ -173,7 +173,7 @@ class IDSESMainTab:
         self.ivss_main_tab = IVSSMainTab(page, True)
         self.ivss_editor = self.ivss_main_tab.populate()
 
-        self.name_input = ft.TextField(label="Device Name", hint_text="Ente the device's name here...", width=400, on_change=self.on_change_device_name)
+        self.name_input = ft.TextField(label="Device Name", hint_text="Enter the device's name here...", width=400, on_change=self.on_change_device_name)
         self.vendor_input = ft.TextField(label="Vendor Name", hint_text="Enter the device's vendor here...", width=400, multiline=True, min_lines=1, max_lines=10, on_change=self.on_change_device_vendor)
         self.year_input = ft.TextField(label="Enter Year", hint_text="...", width=100, on_change=self.on_change_device_year,
                         input_filter=ft.InputFilter(
@@ -272,6 +272,8 @@ class IDSESMainTab:
             alignment = ft.Alignment.CENTER,
             content= ft.Row(
                 spacing = 5,
+                expand=True,
+                scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Column(
                         margin = 15,

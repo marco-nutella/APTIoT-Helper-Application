@@ -204,7 +204,7 @@ class VulnAssessmentView:
                             ft.ControlState.HOVERED: ft.Colors.GREEN_100,
                             ft.ControlState.DEFAULT: ft.Colors.GREEN_400,
                         },
-                    ))
+                    ), visible=False)
         
         self.add_vulnerability_button = ft.Button("Add New Vulnerability", on_click=self.add_new_vulnerability)
         self.vulnerability_stubs_widgets = []
@@ -250,6 +250,7 @@ class VulnAssessmentView:
         vuln_stub = IVSSStubWidget(self.page, new_vuln)
         self.vulnerability_stubs.append(vuln_stub)
         self.vulnerability_stubs_widgets.append(vuln_stub.populate())
+        self.next_button.visible = True
         self.page.update()
 
     def populate(self):
@@ -271,10 +272,10 @@ class VulnAssessmentView:
                             expand = True,
                             controls=[
                                 ft.Text(value="Description", expand=True, size=24, weight=ft.FontWeight.W_600),
-                                ft.Text(value="""(Currently) Optional step revolving the documentation of wired or wireless communications the device is capable of performing. Vulnerability Assessment
-consists of using some manner of network monitor (such as WireShark) in order to capture exchanges and transactions between devices for further manual analysis. In doing so, the tester is able to
-understand the implementation of the device\'s features, as well as study possible vulnerabilities, such as a lack of/weak encryption in specific transactions. The result is a series of network communication diagrams
-(think of a TCP 3-way handshake diagram) documenting different types of exchanges between devices."""
+                                ft.Text(value="""Vulnerability Assessment is the first of the two most critical parts of APTIoT. In it, the goal is to use software (and potentially hardware) tools
+to investigate potential vulnerabilities in the device, making use of all of the information acquired up to this point. Vulnerabilities aren't scored in this step, and don't have to be confirmed - 
+treat it as a list of vulnerabilities that should be verified in the Exploitation step. Document the open ports and available services in the device, as well as the tools that were used in this process,
+before listing all relevant potential vulnerabilities."""
                                 , expand=True, size=16, weight=ft.FontWeight.W_400, text_align=ft.TextAlign.LEFT), # """ Breaks spacing in the string, so these lines needs to break identation.
                                 ft.Text(value="Deliverables", expand=True, size=36, weight=ft.FontWeight.W_800),
                                 ft.Text(value="Open Ports and Available Services", expand=True, size=24, weight=ft.FontWeight.W_600),
@@ -282,6 +283,7 @@ understand the implementation of the device\'s features, as well as study possib
                                 ft.Text(value="Tools and Software Used", expand=True, size=24, weight=ft.FontWeight.W_600),
                                 self.tools_input,
                                 ft.Row(
+                                    alignment=ft.MainAxisAlignment.START,
                                     controls=[
                                         ft.Text(value="Identified Vulnerabilities", expand=True, size=24, weight=ft.FontWeight.W_600),
                                         self.add_vulnerability_button,

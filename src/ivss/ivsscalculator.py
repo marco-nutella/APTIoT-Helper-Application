@@ -398,8 +398,8 @@ class IVSSMainTab:
             self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))
 
     def export_vulnerability_and_reset_calculator(self) -> IVSSVulnerability:
-        if not self.complete_mode:
-            raise Exception("Exporting vulnerabilities only available in complete mode.")
+        #if not self.complete_mode:
+        #    raise Exception("Exporting vulnerabilities only available in complete mode.")
         vulnerability = copy.deepcopy(self.ivss_widget.get_vulnerability()) # Creates independence from the vulnerability we're about to reset.
 
         self.ivss_widget.update_widget(vulnerability=IVSSVulnerability())

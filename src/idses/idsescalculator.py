@@ -41,6 +41,19 @@ class IDSESDevice:
         vulnerability.set_id(self.vulnerability_protocols[protocol])
         self.vulnerabilities[vulnerability.get_name()] = vulnerability
 
+    def update_vulnerability(self, vulnerability:IVSSVulnerability) -> IVSSVulnerability:
+        if not vulnerability.get_name() in self.vulnerabilities:
+            return vulnerability
+        old_vuln = self.vulnerabilities[vulnerability.get_name()]
+        old_vuln.set_impact_group(vulnerability.impact_group)
+        old_vuln.set_exposure_group(vulnerability.exposure_group)
+        old_vuln.set_weights(vulnerability.weights)
+        old_vuln.append_to_description(vulnerability.get_description())
+        old_vuln.calculate_score()
+        old_vuln.calculate_weighted_score()
+        return old_vuln
+
+
     def remove_protocol(self, protocol:Protocols):
         if protocol in self.protocols:
             del self.protocols[protocol]

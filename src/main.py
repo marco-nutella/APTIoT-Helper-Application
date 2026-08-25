@@ -6,6 +6,7 @@ from pt.envsetup import EnvSetupView
 from pt.intelgathering import IntelGatheringView
 from pt.trafficanalysis import TrafficAnalysisView
 from pt.vulnassessment import VulnAssessmentView
+from pt.exploitation import ExploitationView
 
 
 def main(page: ft.Page):
@@ -16,6 +17,7 @@ def main(page: ft.Page):
     intelgathering_view = IntelGatheringView(page)
     trafficanalysis_view = TrafficAnalysisView(page)
     vulnassessment_view = VulnAssessmentView(page)
+    exploitation_view = ExploitationView(page)
 
     selection_tabs = ft.Tabs(
         length=4,
@@ -122,6 +124,18 @@ def main(page: ft.Page):
                         ft.SafeArea(
                             expand = True,
                             content = vulnassessment_view.populate()
+                        )
+                    ]
+                )
+            )
+        if page.route == "/exploitation":
+            page.views.append(
+                ft.View(
+                    route="/exploitation",
+                    controls=[
+                        ft.SafeArea(
+                            expand = True,
+                            content = exploitation_view.populate()
                         )
                     ]
                 )

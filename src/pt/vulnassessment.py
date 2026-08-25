@@ -285,7 +285,7 @@ before listing all relevant potential vulnerabilities."""
                                 ft.Row(
                                     alignment=ft.MainAxisAlignment.START,
                                     controls=[
-                                        ft.Text(value="Identified Vulnerabilities", expand=True, size=24, weight=ft.FontWeight.W_600),
+                                        ft.Text(value="Identified Vulnerabilities", size=24, weight=ft.FontWeight.W_600),
                                         self.add_vulnerability_button,
                                     ]
                                 ),

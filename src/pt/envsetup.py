@@ -1,6 +1,7 @@
 import flet as ft
 import base64
 import io
+import os
 from docx import Document
 
 
@@ -39,7 +40,7 @@ class EnvSetupView:
         diagram_bytes_stream = io.BytesIO(self.image_src)
         section = self.document.sections[0]
         self.document.add_paragraph().add_run().add_picture(diagram_bytes_stream, width=section.page_width-section.left_margin-section.right_margin) # type: ignore
-        self.document.save(f"{pt_handler.device.name} Environment Setup.docx")
+        self.document.save(os.path.join(self.page.session.store.get("pt_handler").save_path, f"{pt_handler.device.name} Environment Setup.docx"))
         pt_handler.documents["envsetup"] = self.document
 
     def next_step(self):
@@ -49,7 +50,7 @@ class EnvSetupView:
         pt_handler.open_intelgathering()
 
     async def upload_images(self):
-        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=False, with_data=True)
+        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.CUSTOM, allowed_extensions=["png", "jpg", "jpeg"], allow_multiple=False, with_data=True)
         for i in images:
             if not i.bytes:
                 continue

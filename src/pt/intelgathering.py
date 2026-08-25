@@ -1,6 +1,7 @@
 import flet as ft
 import base64
 import io
+import os
 from docx import Document
 from idses.idsesutilities import Protocols
 
@@ -40,7 +41,7 @@ class IntelGatheringView:
         self.document.add_heading("Security Research", level=2)
         self.document.add_paragraph(self.security_text_input.value)
 
-        self.document.save(f"{pt_handler.device.name} Intelligence Gathering.docx")
+        self.document.save(os.path.join(self.page.session.store.get("pt_handler").save_path, f"{pt_handler.device.name} Intelligence Gathering.docx"))
         pt_handler.documents["intelgathering"] = self.document
 
     def next_step(self):

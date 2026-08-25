@@ -1,4 +1,5 @@
 import flet as ft
+from tkinter import filedialog
 from ivss.ivsscalculator import IVSSMainTab
 from idses.idsescalculator import IDSESMainTab, IDSESDevice
 from pt.ptassistant import PTAssistantMainTab, Organization, APTIoTPenetrationTest
@@ -7,6 +8,8 @@ from pt.intelgathering import IntelGatheringView
 from pt.trafficanalysis import TrafficAnalysisView
 from pt.vulnassessment import VulnAssessmentView
 from pt.exploitation import ExploitationView
+from pt.reporting import ReportingView
+from pt.final import FinalView
 
 
 def main(page: ft.Page):
@@ -18,6 +21,8 @@ def main(page: ft.Page):
     trafficanalysis_view = TrafficAnalysisView(page)
     vulnassessment_view = VulnAssessmentView(page)
     exploitation_view = ExploitationView(page)
+    reporting_view = ReportingView(page)
+    final_view = FinalView(page)
 
     selection_tabs = ft.Tabs(
         length=4,
@@ -140,6 +145,30 @@ def main(page: ft.Page):
                     ]
                 )
             )
+        if page.route == "/reporting":
+            page.views.append(
+                ft.View(
+                    route="/reporting",
+                    controls=[
+                        ft.SafeArea(
+                            expand = True,
+                            content = reporting_view.populate()
+                        )
+                    ]
+                )
+            )
+        if page.route == "/final":
+            page.views.append(
+                ft.View(
+                    route="/final",
+                    controls=[
+                        ft.SafeArea(
+                            expand = True,
+                            content = final_view.populate()
+                        )
+                    ]
+                )
+            )
         page.update()
 
     async def view_pop(e):
@@ -154,11 +183,12 @@ def main(page: ft.Page):
     def start_test(route:str):
         org = Organization("ISCTE", None)
         device = IDSESDevice("BabyWatcher Mk.4000", "Marty McPerson Inc.", 2026)
-        pt_handler = APTIoTPenetrationTest(page, device, org, "Marty McPerson", "01/01/2026")
+        save_path = filedialog.askdirectory()
+        pt_handler = APTIoTPenetrationTest(page, device, org, "Marty McPerson", "01/01/2026", save_path)
         page.session.store.set("pt_handler", pt_handler)
         page.navigate(route)
 
-    start_test("/vulnassessment")
+    #start_test("/reporting")
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop

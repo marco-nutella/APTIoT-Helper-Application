@@ -1,6 +1,7 @@
 import flet as ft
 import base64
 import io
+import os
 from docx import Document
 
 class TrafficAnalysisView:
@@ -45,7 +46,7 @@ class TrafficAnalysisView:
         else:
             self.document.add_heading("Skipped by the tester(s).", level=1)
 
-        self.document.save(f"{pt_handler.device.name} Traffic Analysis.docx")
+        self.document.save(os.path.join(self.page.session.store.get("pt_handler").save_path, f"{pt_handler.device.name} Traffic Analysis.docx"))
         pt_handler.documents["trafficanalysis"] = self.document
 
     def next_step(self):
@@ -55,7 +56,7 @@ class TrafficAnalysisView:
         pt_handler.open_vulnassessment()
 
     async def upload_images(self):
-        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=True, with_data=True)
+        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.CUSTOM, allowed_extensions=["png", "jpg", "jpeg"], allow_multiple=True, with_data=True)
         for i in images:
             if not i.bytes:
                 continue

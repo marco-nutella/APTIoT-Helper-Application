@@ -419,7 +419,7 @@ class IVSSMainTab:
         return vulnerability
 
     async def upload_images(self):
-        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=True, with_data=True)
+        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.CUSTOM, allowed_extensions=["png", "jpg", "jpeg"], allow_multiple=True, with_data=True)
         for i in images:
             #reassembled_image = i.bytes.decode("utf-8", errors="replace") if i.bytes else "" # Nope.
             if not i.bytes:

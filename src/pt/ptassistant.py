@@ -2,6 +2,7 @@ import flet as ft
 from idses.idsescalculator import IDSESDevice
 from idses.idsesutilities import RiskEnvironment, RiskCriticality
 from docx import Document
+from tkinter import filedialog
 import io
 
 class Organization:
@@ -10,12 +11,13 @@ class Organization:
         self.logo = logo
 
 class APTIoTPenetrationTest:
-    def __init__(self, page, device:IDSESDevice, org:Organization, testers:str, date:str):
+    def __init__(self, page, device:IDSESDevice, org:Organization, testers:str, date:str, save_path:str):
         self.page = page
         self.device = device
         self.org = org
         self.testers = testers
         self.date = date
+        self.save_path = save_path
         self.documents = {
             "envsetup": None,
             "intelgathering": None,
@@ -52,6 +54,9 @@ class APTIoTPenetrationTest:
 
     def open_reporting(self):
         self.page.navigate("/reporting")
+
+    def open_final(self):
+        self.page.navigate("/final")
 
     def create_doc_header(self, document):
         org = self.get_org_info()
@@ -134,7 +139,7 @@ class PTAssistantMainTab:
         self.device.update_risk_criticality(RiskCriticality[value])
 
     async def upload_images(self):
-        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.IMAGE, allow_multiple=False, with_data=True)
+        images = await self.file_picker.pick_files(file_type=ft.FilePickerFileType.CUSTOM, allowed_extensions=["png", "jpg", "jpeg"], allow_multiple=False, with_data=True)
         for i in images:
             if not i.bytes:
                 continue
@@ -152,7 +157,12 @@ class PTAssistantMainTab:
             self.page.show_dialog(ft.SnackBar("Incomplete device information. Please verify and try again."))
             return
 
-        pt_handler = APTIoTPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value)
+        save_path = filedialog.askdirectory(title="Select a Save Location")
+        if not save_path:
+            self.page.show_dialog(ft.SnackBar("Please select a valid save path for the documents and try again."))
+            return
+        
+        pt_handler = APTIoTPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value, save_path)
         self.page.session.store.set("pt_handler", pt_handler)
 
         pt_handler.open_envsetup()

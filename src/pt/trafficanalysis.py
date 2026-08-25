@@ -35,13 +35,17 @@ class TrafficAnalysisView:
         self.document.add_heading("Traffic Analysis", level=1)
         self.document.add_heading("Network Diagrams of Relevant Device Communications", level=2)
 
-        for i in self.images_src:
-            diagram_bytes_stream = io.BytesIO(i)
-            self.document.add_paragraph().add_run().add_picture(diagram_bytes_stream, width=section.page_width-section.left_margin-section.right_margin) # type: ignore
-        self.document.add_paragraph(self.notes_input.value)
+        if self.images_src:
+            section = self.document.sections[0]
+            for i in self.images_src:
+                diagram_bytes_stream = io.BytesIO(i)
+                self.document.add_paragraph().add_run().add_picture(diagram_bytes_stream, width=section.page_width-section.left_margin-section.right_margin) # type: ignore
+            self.document.add_heading("Additional Notes", level=2)
+            self.document.add_paragraph(self.notes_input.value)
+        else:
+            self.document.add_heading("Skipped by the tester(s).", level=1)
 
         self.document.save(f"{pt_handler.device.name} Traffic Analysis.docx")
-        self.page.session.store.set("pt_handler", pt_handler)
         pt_handler.documents["trafficanalysis"] = self.document
 
     def next_step(self):
@@ -86,10 +90,10 @@ class TrafficAnalysisView:
                     spacing = 15,
                     controls=[
                         ft.Row(
-                             controls=[
-                                ft.Text("(Optional) Traffic Analysis", size=36, weight=ft.FontWeight.W_800),
-                                self.next_button,
-                             ]
+                            controls=[
+                            ft.Text("(Optional) Traffic Analysis", size=36, weight=ft.FontWeight.W_800),
+                            self.next_button,
+                            ]
                         ),
                         ft.Column(
                             scroll = ft.ScrollMode.AUTO,
@@ -105,7 +109,7 @@ understand the implementation of the device\'s features, as well as study possib
                                 ft.Text(value="Deliverables", expand=True, size=36, weight=ft.FontWeight.W_800),
                                 ft.Text(value="Network Diagrams of Relevant Device Communications", expand=True, size=24, weight=ft.FontWeight.W_600),
                                 self.images_display,
-                                ft.Button("Upload Diagram Image(s)", on_click=self.upload_images),
+                                ft.Button("Add Diagram Image(s)", on_click=self.upload_images),
                                 ft.Text(value="Additional Notes", expand=True, size=24, weight=ft.FontWeight.W_600),
                                 self.notes_input,
                             ]

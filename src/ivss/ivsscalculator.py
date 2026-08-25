@@ -193,7 +193,6 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
             expand=True,
         )
         
-        # Create the dialog
         dialog = ft.AlertDialog(
             content=img_container,
             actions=[
@@ -394,11 +393,6 @@ class IVSSMainTab:
             self.cvss_ivss_widget.update_vulnerability_protocol(event.control.value)
 
     def on_change_vulnerability_year(self, event:ft.Event[ft.TextField]):
-        self.ivss_widget.update_vulnerability_details(year=int(event.control.value))
-        if self.complete_mode:
-            self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))
-
-    def on_add_vulnerability_images(self, event:ft.Event[ft.TextField]):
         self.ivss_widget.update_vulnerability_details(year=int(event.control.value))
         if self.complete_mode:
             self.cvss_ivss_widget.update_vulnerability_details(year=int(event.control.value))

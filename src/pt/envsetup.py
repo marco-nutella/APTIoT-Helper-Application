@@ -68,10 +68,10 @@ class EnvSetupView:
                     spacing = 15,
                     controls=[
                         ft.Row(
-                             controls=[
-                                ft.Text("Environment Setup & Familiarization", size=36, weight=ft.FontWeight.W_800),
-                                self.next_button,
-                             ]
+                            controls=[
+                            ft.Text("Environment Setup & Familiarization", size=36, weight=ft.FontWeight.W_800),
+                            self.next_button,
+                            ]
                         ),
                         ft.Column(
                             scroll = ft.ScrollMode.AUTO,
@@ -88,7 +88,7 @@ be present in your testing environment, then they should be. Make a local networ
                                 ft.Text(value="Deliverables", expand=True, size=36, weight=ft.FontWeight.W_800),
                                 ft.Text(value="Local Network Diagram of Environment Setup", expand=True, size=24, weight=ft.FontWeight.W_600),
                                 self.image,
-                                ft.Button("Upload Diagram Image", on_click=self.upload_images),
+                                ft.Button("Add Diagram Image", on_click=self.upload_images),
                             ]
                         )
                     ]

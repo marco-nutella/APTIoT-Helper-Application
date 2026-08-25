@@ -5,10 +5,9 @@ from docx import Document
 from idses.idsesutilities import Protocols
 
 class IntelGatheringView:
-    def __init__(self, page):
+    def __init__(self, page): # We define self.device later, since it's not yet defined by the time the object gets instantiated.
         self.page = page
         self.document = Document()
-        self.device = self.page.session.store.get("pt_handler")
 
         self.checkboxes = []
         self.device_text_input = ft.TextField(label="Device Research", hint_text="Enter device OSINT research here...", width=800, multiline=True, min_lines=1, max_lines=20)
@@ -59,6 +58,7 @@ class IntelGatheringView:
                 self.device.remove_protocol(event.control.data)
 
     def populate(self):
+            self.device = self.page.session.store.get("pt_handler").device
             checkboxes_split_point = round(len(self.checkboxes)/2)
             return ft.Container(
                 alignment = ft.Alignment.CENTER,
@@ -67,10 +67,10 @@ class IntelGatheringView:
                     spacing = 15,
                     controls=[
                         ft.Row(
-                             controls=[
-                                ft.Text("Intelligence Gathering", size=36, weight=ft.FontWeight.W_800),
-                                self.next_button,
-                             ]
+                            controls=[
+                            ft.Text("Intelligence Gathering", size=36, weight=ft.FontWeight.W_800),
+                            self.next_button,
+                            ]
                         ),
                         ft.Column(
                             scroll = ft.ScrollMode.AUTO,

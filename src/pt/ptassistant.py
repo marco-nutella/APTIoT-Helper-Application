@@ -9,7 +9,7 @@ class Organization:
         self.name = name
         self.logo = logo
 
-class IDSESPenetrationTest:
+class APTIoTPenetrationTest:
     def __init__(self, page, device:IDSESDevice, org:Organization, testers:str, date:str):
         self.page = page
         self.device = device
@@ -152,7 +152,7 @@ class PTAssistantMainTab:
             self.page.show_dialog(ft.SnackBar("Incomplete device information. Please verify and try again."))
             return
 
-        pt_handler = IDSESPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value)
+        pt_handler = APTIoTPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value)
         self.page.session.store.set("pt_handler", pt_handler)
 
         pt_handler.open_envsetup()

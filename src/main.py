@@ -1,10 +1,11 @@
 import flet as ft
 from ivss.ivsscalculator import IVSSMainTab
-from idses.idsescalculator import IDSESMainTab
-from pt.ptassistant import PTAssistantMainTab
+from idses.idsescalculator import IDSESMainTab, IDSESDevice
+from pt.ptassistant import PTAssistantMainTab, Organization, APTIoTPenetrationTest
 from pt.envsetup import EnvSetupView
 from pt.intelgathering import IntelGatheringView
 from pt.trafficanalysis import TrafficAnalysisView
+from pt.vulnassessment import VulnAssessmentView
 
 
 def main(page: ft.Page):
@@ -14,6 +15,7 @@ def main(page: ft.Page):
     envsetup_view = EnvSetupView(page)
     intelgathering_view = IntelGatheringView(page)
     trafficanalysis_view = TrafficAnalysisView(page)
+    vulnassessment_view = VulnAssessmentView(page)
 
     selection_tabs = ft.Tabs(
         length=4,
@@ -112,6 +114,18 @@ def main(page: ft.Page):
                     ]
                 )
             )
+        if page.route == "/vulnassessment":
+            page.views.append(
+                ft.View(
+                    route="/vulnassessment",
+                    controls=[
+                        ft.SafeArea(
+                            expand = True,
+                            content = vulnassessment_view.populate()
+                        )
+                    ]
+                )
+            )
         page.update()
 
     async def view_pop(e):
@@ -122,7 +136,15 @@ def main(page: ft.Page):
             await page.push_route(top_view.route)
 
     route_change()
-    #page.navigate("/envsetup")
+
+    def start_test(route:str):
+        org = Organization("ISCTE", None)
+        device = IDSESDevice("BabyWatcher Mk.4000", "Marty McPerson Inc.", 2026)
+        pt_handler = APTIoTPenetrationTest(page, device, org, "Marty McPerson", "01/01/2026")
+        page.session.store.set("pt_handler", pt_handler)
+        page.navigate(route)
+
+    start_test("/vulnassessment")
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop

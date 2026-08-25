@@ -3,6 +3,7 @@ import base64
 import io
 import os
 from docx import Document
+from docxcompose.composer import Composer
 from idses.idsesutilities import Protocols
 from idses.idsescalculator import IDSESWidget
 
@@ -47,6 +48,14 @@ class ReportingView:
 
         self.document.save(os.path.join(self.page.session.store.get("pt_handler").save_path, f"{pt_handler.device.name} Reporting.docx"))
         pt_handler.documents["reporting"] = self.document
+
+        composer = Composer(pt_handler.documents["reporting"])
+        composer.append(pt_handler.documents["envsetup"])
+        composer.append(pt_handler.documents["intelgathering"])
+        composer.append(pt_handler.documents["trafficanalysis"])
+        composer.append(pt_handler.documents["vulnassessment"])
+        composer.append(pt_handler.documents["exploitation"])
+        composer.save(os.path.join(self.page.session.store.get("pt_handler").save_path, f"{pt_handler.device.name} Final Report Document.docx"))
 
     def next_step(self):
         pt_handler = self.page.session.store.get("pt_handler")

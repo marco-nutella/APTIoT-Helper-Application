@@ -188,7 +188,7 @@ def main(page: ft.Page):
         page.session.store.set("pt_handler", pt_handler)
         page.navigate(route)
 
-    #start_test("/reporting")
+    #start_test("/final")
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop

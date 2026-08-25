@@ -1,5 +1,5 @@
 import flet as ft
-from tkinter import filedialog
+import asyncio
 from ivss.ivsscalculator import IVSSMainTab
 from idses.idsescalculator import IDSESMainTab, IDSESDevice
 from pt.ptassistant import PTAssistantMainTab, Organization, APTIoTPenetrationTest
@@ -180,15 +180,22 @@ def main(page: ft.Page):
 
     route_change()
 
-    def start_test(route:str):
+    async def pick_save_path():
+        file_picker = ft.FilePicker()
+        result = await file_picker.get_directory_path()
+        if result:
+            return result
+        return ""
+
+    async def start_test(route:str):
         org = Organization("ISCTE", None)
         device = IDSESDevice("BabyWatcher Mk.4000", "Marty McPerson Inc.", 2026)
-        save_path = filedialog.askdirectory()
-        pt_handler = APTIoTPenetrationTest(page, device, org, "Marty McPerson", "01/01/2026", save_path)
+        save_path = await pick_save_path()
+        pt_handler = APTIoTPenetrationTest(page, device, org, "Marty McPerson", "01/01/2026", save_path) # type: ignore Wrong inferred return type. It's str|None, not a coroutine... as long as we wait for it.
         page.session.store.set("pt_handler", pt_handler)
         page.navigate(route)
 
-    #start_test("/final")
+    #asyncio.create_task(start_test("/reporting"))
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop

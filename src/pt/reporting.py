@@ -2,7 +2,9 @@ import flet as ft
 import base64
 import io
 import os
+from pathlib import Path
 from docx import Document
+from docx.shared import RGBColor
 from docxcompose.composer import Composer
 from idses.idsesutilities import Protocols
 from idses.idsescalculator import IDSESWidget
@@ -30,13 +32,31 @@ class ReportingView:
     def make_next_visible(self):
         self.next_button.visible = True
 
+    def get_assets_dir(self) -> Path: # Taken directly from: https://flet.dev/docs/cookbook/assets/
+        default_assets_dir = Path(__file__).parent / "assets"   # fallback for local runs
+        return Path(os.environ.get("FLET_ASSETS_DIR", str(default_assets_dir))).resolve()
+
     def write_document(self, pt_handler):
         self.document = pt_handler.create_doc_header(self.document)
 
         device = self.page.session.store.get("pt_handler").device
-        self.document.add_heading("Device Final Absolute IDSES Score:      ", level=0).add_run(f"{device.get_idses_score()}, Weighted Score: {device.get_weighted_idses_score()}")
+        section = self.document.sections[0]
 
+             
+        self.document.add_heading("Device Final Absolute IDSES Score:      ", level=0).add_run(f"{device.get_idses_score()}, Weighted Score: {device.get_weighted_idses_score()}")
         self.document.add_heading("Reporting", level=1)
+
+        with (self.get_assets_dir() / "riskmatrix.png").open("rb") as f:
+            image_bytes_stream = io.BytesIO(f.read())
+            self.document.add_heading("Risk Acceptance", level=0)
+            self.document.add_paragraph().add_run().add_picture(image_bytes_stream, width=(section.page_width-section.left_margin-section.right_margin)/1.4)
+            self.document.add_paragraph(f"Your recommended highest acceptable risk: {device.get_recommended_risk_acceptance()}")
+            if not device.validate_score_with_risk():
+                self.document.add_paragraph().add_run("This device is NOT acceptable for your recommended risk level.").font.color.rgb = RGBColor(255, 0, 0)
+            else:
+                self.document.add_paragraph().add_run("This device is acceptable for your recommended risk level.").font.color.rgb = RGBColor(0, 255, 0)
+            f.close()
+
         self.document.add_heading("Penetration Test Summary", level=2)
         self.document.add_paragraph(self.summary_input.value)
 

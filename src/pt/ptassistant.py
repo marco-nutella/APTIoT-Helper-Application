@@ -2,7 +2,6 @@ import flet as ft
 from idses.idsescalculator import IDSESDevice
 from idses.idsesutilities import RiskEnvironment, RiskCriticality
 from docx import Document
-from tkinter import filedialog
 import io
 
 class Organization:
@@ -147,7 +146,14 @@ class PTAssistantMainTab:
             self.org_logo = i.bytes
             self.checkmark.visible = True
 
-    def start_penetration_test(self):
+    async def pick_save_path(self):
+        file_picker = ft.FilePicker()
+        result = await file_picker.get_directory_path(dialog_title="Select a Save Location")
+        if result:
+            return result
+        return ""
+
+    async def start_penetration_test(self):
         if not self.org_name_input.value or not self.tester_name_input.value or not self.date_input.value:
             self.page.show_dialog(ft.SnackBar("Incomplete penetration testing information. Please verify and try again."))
             return
@@ -157,12 +163,12 @@ class PTAssistantMainTab:
             self.page.show_dialog(ft.SnackBar("Incomplete device information. Please verify and try again."))
             return
 
-        save_path = filedialog.askdirectory(title="Select a Save Location")
+        save_path = await self.pick_save_path()
         if not save_path:
             self.page.show_dialog(ft.SnackBar("Please select a valid save path for the documents and try again."))
             return
         
-        pt_handler = APTIoTPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value, save_path)
+        pt_handler = APTIoTPenetrationTest(self.page, self.device, org, self.tester_name_input.value, self.date_input.value, save_path) # type: ignore Wrong inferred return type. It's str|None, not a coroutine... as long as we wait for it.
         self.page.session.store.set("pt_handler", pt_handler)
 
         pt_handler.open_envsetup()

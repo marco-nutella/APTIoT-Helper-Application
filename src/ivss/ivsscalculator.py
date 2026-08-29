@@ -82,7 +82,7 @@ class IVSSWidget(): # This is where the IVSSVulnerability "lives".
         self.ivss_text = ft.Text(value="", size=38, weight=ft.FontWeight.W_600, text_align=ft.TextAlign.CENTER)
         self.ivss_color = ft.Container(width=200, height=200, bgcolor=IVSSWidget.colors[0], border_radius=25)
         self.weighted_ivss_score = ft.Text(value="", size=14, weight=ft.FontWeight.W_400)
-        self.ivss_str = ft.Text(value="", size=14, weight=ft.FontWeight.W_600)
+        self.ivss_str = ft.Text(value="", size=14, weight=ft.FontWeight.W_600, width=300, max_lines=5)
         self.vulnerability = vulnerability if vulnerability else IVSSVulnerability()
 
         self.update_widget(impact_group, exposure_group, weights, vulnerability)

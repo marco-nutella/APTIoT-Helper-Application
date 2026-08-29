@@ -88,6 +88,7 @@ class IVSSStringVectorUtil:
         },
         "UI": {
             "A": ("AU", "X"),
+            "R": ("AU", "X"), # CVSS 3.1
             "P": ("AU", "L"),
             "N": ("AU", "H")
         },
@@ -95,7 +96,7 @@ class IVSSStringVectorUtil:
             "U": ("S", "X"), # In CVSS 3.1, "S" is used for Scope, which is unrelated to safety. It uses the string values "(U)nchanged"...
             "C": ("S", "X"), # ...and "(C)hanged"
             "X": ("S", "X"),
-            "N": ("S", "M"),
+            "N": ("S", "L"),
             "P": ("S", "VH")
         }
     }
